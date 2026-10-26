@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="tf" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f7fa"/>
+      <stop offset="1" stop-color="#12d8c8"/>
+    </linearGradient>
+    <linearGradient id="timeline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#253746"/>
+      <stop offset=".72" stop-color="#13d6c3"/>
+      <stop offset="1" stop-color="#06bcae"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="#080b0f"/>
+  <path d="M45 49h174l-25 26h-57l-12 100h-35l14-100H22z" fill="url(#tf)"/>
+  <path d="M139 91h78l-24 25h-57zM134 130h65l-25 24h-43zM128 168h49l-23 22h-29z" fill="#10cdbd"/>
+  <path d="M41 184h45v17H41zM90 184h45v17H90zM140 184h47v17h-47z" fill="url(#timeline)"/>
+  <path d="M190 179l9 11-9 11z" fill="#f4f7fa"/>
+  <path d="M190 190h5v25h-5z" fill="#f4f7fa"/>
+</svg>
