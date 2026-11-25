@@ -2,7 +2,7 @@
 
 **TrackForge** is a local plugin for Disguise Designer. It imports CSV or Excel `.xlsx` track lists, previews the changes, and creates tracks or updates the timecode (TC) tag on existing tracks.
 
-**Ready-to-install release:** [TrackForge-v0.1.0.zip](./release/TrackForge-v0.1.0.zip)
+**Ready-to-install release:** [TrackForge-v0.2.0.zip](./release/TrackForge-v0.2.0.zip)
 
 ## GitHub release and source
 
@@ -86,6 +86,8 @@ Test on a copy of the project before applying a large or important track list.
 - **No preview appears:** Choose a track name column and either a timecode column or **No timecode — create tracks only**. Ensure the file includes a header row and data rows.
 - **Invalid timecode:** Use `H:MM:SS`, `HH:MM:SS`, `H:MM:SS:FF`, or `HH:MM:SS:FF`; minutes and seconds must be between `00` and `59`.
 - **An operation fails:** Read the row's status message and verify that the project is writable and Designer remains connected.
+- **REAPER not reachable:** Check that REAPER is open, that its web interface uses the port entered in TrackForge, and that the firewall on the REAPER computer allows incoming connections from the Designer machine. The detail in brackets after the message shows the network error.
+- **Region TCs are offset:** Check the frame rate and the project start TC in ReaperConnect; they must match the REAPER project settings.
 
 ---
 
@@ -97,7 +99,7 @@ Created by Stefano Petroni
 
 **TrackForge** è un plugin locale per Disguise Designer. Importa scalette CSV o Excel `.xlsx`, mostra un'anteprima delle modifiche e crea le track oppure aggiorna il tag timecode (TC) delle track esistenti.
 
-**Release pronta per l'installazione:** [TrackForge-v0.1.0.zip](./release/TrackForge-v0.1.0.zip)
+**Release pronta per l'installazione:** [TrackForge-v0.2.0.zip](./release/TrackForge-v0.2.0.zip)
 
 ## Release GitHub e sorgenti
 
@@ -180,6 +182,8 @@ Prima di applicare una scaletta importante, esegui una prova su una copia del pr
 - **L'anteprima non appare:** seleziona la colonna del nome track e una colonna timecode oppure **No timecode — create tracks only**. Verifica che il file contenga una riga di intestazione e righe di dati.
 - **Timecode non valido:** usa `H:MM:SS`, `HH:MM:SS`, `H:MM:SS:FF` oppure `HH:MM:SS:FF`; minuti e secondi devono essere compresi tra `00` e `59`.
 - **Un'operazione non riesce:** leggi il messaggio di stato della riga e verifica che il progetto sia scrivibile e Designer sia ancora connesso.
+- **REAPER non raggiungibile:** verifica che REAPER sia aperto, che la sua web interface usi la porta indicata in TrackForge e che il firewall del computer REAPER consenta le connessioni in entrata dalla macchina Designer. Il dettaglio tra parentesi dopo il messaggio indica l'errore di rete.
+- **I TC delle region sono sfasati:** controlla frame rate e start TC del progetto in ReaperConnect; devono corrispondere alle impostazioni del progetto REAPER.
 
 ---
 

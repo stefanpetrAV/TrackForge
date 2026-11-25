@@ -1,0 +1,6 @@
+{
+  "name": "TrackForge",
+  "description": "Import CSV and Excel track lists or REAPER regions and synchronize track timecode tags.",
+  "version": "0.2.0",
+  "entry": "index.html"
+}
