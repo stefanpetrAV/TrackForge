@@ -160,16 +160,22 @@ function fail(message: string) {
   statusText.value = `Last attempt at ${now()}`
 }
 
+function viaLabel(response: ReaperResponse): string {
+  return response.via === 'browser' ? '(direct)' : '(via Designer)'
+}
+
 function explain(response: ReaperResponse): string {
   const address = `${settings.host.trim()}:${settings.port}`
   switch (response.kind) {
     case 'timeout':
     case 'unreachable':
-      return `REAPER did not respond at ${address}. Check that REAPER is open, that the web interface is enabled on this port, and that the firewall on the REAPER computer allows incoming connections.`
+      return `REAPER did not respond at ${address}. Check that REAPER is open, that the web interface is enabled on this port, and that the firewall on the REAPER computer allows incoming connections.${response.detail ? ` (${response.detail})` : ''}`
     case 'auth':
       return 'REAPER rejected the username or password set for its web interface.'
     case 'notFound':
       return `Something answered at ${address}, but not the REAPER web interface. Check the port in REAPER › Preferences › Control/OSC/web.`
+    case 'unsupported':
+      return `${response.error || 'Designer cannot open network connections.'}${response.detail ? ` (${response.detail})` : ''}`
     default:
       return response.error || 'REAPER did not complete the request.'
   }
@@ -206,7 +212,7 @@ async function testConnection() {
     return
   }
   state.value = 'connected'
-  statusText.value = `REAPER responded in ${response.elapsedMs ?? '?'} ms · tested at ${now()}`
+  statusText.value = `REAPER responded in ${response.elapsedMs ?? '?'} ms ${viaLabel(response)} · tested at ${now()}`
 }
 
 async function readRegions() {
@@ -231,7 +237,7 @@ async function readRegions() {
   for (const key of Object.keys(results)) delete results[key]
   hasRead.value = true
   state.value = 'connected'
-  statusText.value = `REAPER responded in ${response.elapsedMs ?? '?'} ms · ${regions.value.length} regions · read at ${now()}`
+  statusText.value = `REAPER responded in ${response.elapsedMs ?? '?'} ms ${viaLabel(response)} · ${regions.value.length} regions · read at ${now()}`
 }
 
 function selectAll(event: Event) {

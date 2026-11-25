@@ -17,6 +17,46 @@ export interface ReaperResponse {
   body?: string
   error?: string
   elapsedMs?: number | null
+  detail?: string | null
+  /** Which side reached REAPER: the plugin page itself, or Designer's Python. */
+  via?: 'browser' | 'designer'
+}
+
+/**
+ * Tries to reach the REAPER web interface straight from the plugin page.
+ * Returns null when the browser cannot read the answer (network error, timeout,
+ * or the cross-origin check), so the caller can fall back to Designer's Python.
+ */
+export async function fetchReaperDirect(request: ReaperRequest, timeoutMs = 1500): Promise<ReaperResponse | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const started = performance.now()
+  const headers: Record<string, string> = {}
+  if (request.username || request.password) {
+    headers.Authorization = `Basic ${btoa(unescape(encodeURIComponent(`${request.username}:${request.password}`)))}`
+  }
+  try {
+    const response = await fetch(`http://${request.host}:${request.port}/_/${request.command}`, {
+      headers,
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    const elapsedMs = Math.round(performance.now() - started)
+    if (response.status === 401) {
+      return { ok: false, kind: 'auth', status: 401, error: 'REAPER rejected the username or password.', elapsedMs, via: 'browser' }
+    }
+    if (response.status === 404) {
+      return { ok: false, kind: 'notFound', status: 404, error: 'Web interface command not found.', elapsedMs, via: 'browser' }
+    }
+    if (!response.ok) {
+      return { ok: false, kind: 'http', status: response.status, error: `REAPER answered with HTTP ${response.status}.`, elapsedMs, via: 'browser' }
+    }
+    return { ok: true, status: response.status, body: await response.text(), elapsedMs, via: 'browser' }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export interface SyncResult {

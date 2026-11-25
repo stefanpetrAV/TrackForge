@@ -11,6 +11,7 @@ import {
 } from './importParser'
 import { trackforge } from './trackforge.py'
 import ReaperConnect from './ReaperConnect.vue'
+import { fetchReaperDirect } from './reaperRegions'
 import type {
   ReaperConnectApi,
   ReaperConnectionState,
@@ -289,6 +290,10 @@ async function createSelectedTracks() {
 
 const reaperApi: ReaperConnectApi = {
   async reaperRequest(request) {
+    // The plugin page can read REAPER directly when the browser allows it;
+    // otherwise Designer's Python opens the connection.
+    const direct = await fetchReaperDirect(request)
+    if (direct) return direct
     await registration
     return parseResponse<ReaperResponse>(await reaperRequest(JSON.stringify(request)))
   },

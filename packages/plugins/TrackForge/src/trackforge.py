@@ -1,9 +1,7 @@
 __all__ = ["getExistingTracks", "syncTrack", "reaperRequest"]
 
-import base64
 import json
 import re
-import time
 
 
 def _json_result(value):
@@ -223,16 +221,81 @@ def syncTrack(request_json):
 
 _REAPER_COMMANDS = ("TRANSPORT", "REGION")
 _REAPER_TIMEOUT_SECONDS = 1.5
+_REAPER_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
 
-def _reaper_error(kind, error, status=None, elapsed_ms=None):
+def _reaper_error(kind, error, status=None, elapsed_ms=None, detail=None):
     return _json_result({
         "ok": False,
         "kind": kind,
         "status": status,
         "error": error,
+        "detail": detail,
         "elapsedMs": elapsed_ms,
     })
+
+
+def _dechunk(body):
+    result = []
+    while body:
+        line, _, rest = body.partition(b"\r\n")
+        try:
+            size = int(line.split(b";")[0].strip() or b"0", 16)
+        except ValueError:
+            break
+        if size == 0:
+            break
+        result.append(rest[:size])
+        body = rest[size + 2:]
+    return b"".join(result)
+
+
+def _http_get(host, port, path, authorization, timeout):
+    """Minimal HTTP GET over the low-level _socket module.
+
+    Designer's embedded Python has no sys module, so urllib2, httplib and the
+    socket wrapper module cannot be imported. _socket is the C module they
+    build on and does not need sys.
+    """
+    import _socket
+
+    address = _socket.getaddrinfo(host, port, _socket.AF_INET, _socket.SOCK_STREAM)[0]
+    connection = _socket.socket(address[0], address[1], address[2])
+    connection.settimeout(timeout)
+    try:
+        connection.connect(address[4])
+        lines = [
+            "GET %s HTTP/1.0" % path,
+            "Host: %s:%d" % (host, port),
+            "Connection: close",
+            "Accept: text/plain, */*",
+        ]
+        if authorization:
+            lines.append("Authorization: %s" % authorization)
+        connection.sendall(("\r\n".join(lines) + "\r\n\r\n").encode("utf-8"))
+        chunks = []
+        total = 0
+        while total < _REAPER_MAX_RESPONSE_BYTES:
+            data = connection.recv(65536)
+            if not data:
+                break
+            chunks.append(data)
+            total += len(data)
+    finally:
+        connection.close()
+
+    raw = b"".join(chunks)
+    head, _, body = raw.partition(b"\r\n\r\n")
+    head_lines = head.split(b"\r\n")
+    status_parts = head_lines[0].split(b" ")
+    if len(status_parts) < 2 or not status_parts[0].startswith(b"HTTP/"):
+        raise ValueError("not an HTTP response")
+    status = int(status_parts[1])
+    for header in head_lines[1:]:
+        name, _, value = header.partition(b":")
+        if name.strip().lower() == b"transfer-encoding" and b"chunked" in value.lower():
+            body = _dechunk(body)
+    return status, body
 
 
 def reaperRequest(request_json):
@@ -240,8 +303,10 @@ def reaperRequest(request_json):
 
     The request runs inside Designer, so the plugin browser does not need
     cross-origin access to the REAPER computer. The timeout is short because
-    this call blocks Designer's Python while it waits.
+    Designer pauses while this call waits.
     """
+    import time
+
     try:
         request = json.loads(request_json)
         host = unicode(request.get("host", "")).strip()
@@ -259,59 +324,54 @@ def reaperRequest(request_json):
     if command not in _REAPER_COMMANDS:
         return _reaper_error("invalid", "Unsupported REAPER command.")
 
-    try:
-        import urllib2
-        HTTPError = urllib2.HTTPError
-        URLError = urllib2.URLError
-        Request = urllib2.Request
-        urlopen = urllib2.urlopen
-    except ImportError:
-        try:
-            import urllib.request as _request
-            import urllib.error as _error
-            HTTPError = _error.HTTPError
-            URLError = _error.URLError
-            Request = _request.Request
-            urlopen = _request.urlopen
-        except ImportError:
-            return _reaper_error("unsupported", "Designer's Python cannot make HTTP requests.")
-
-    url = "http://%s:%d/_/%s" % (host, port, command)
-    http_request = Request(url)
+    authorization = ""
     if username or password:
-        token = base64.b64encode(("%s:%s" % (username, password)).encode("utf-8"))
-        http_request.add_header("Authorization", "Basic %s" % token.decode("ascii"))
+        import binascii
+        token = binascii.b2a_base64(("%s:%s" % (username, password)).encode("utf-8")).strip()
+        authorization = "Basic %s" % token.decode("ascii")
+
+    try:
+        import _socket
+        timeout_error = _socket.timeout
+    except Exception as error:
+        return _reaper_error(
+            "unsupported",
+            "Designer's Python cannot open network connections.",
+            detail=u"%s: %s" % (type(error).__name__, error),
+        )
 
     started = time.time()
     try:
-        response = urlopen(http_request, timeout=_REAPER_TIMEOUT_SECONDS)
-        raw = response.read()
-        status = int(response.getcode())
-    except HTTPError as error:
+        status, raw = _http_get(host, port, "/_/%s" % command, authorization, _REAPER_TIMEOUT_SECONDS)
+    except timeout_error:
         elapsed_ms = int((time.time() - started) * 1000)
-        code = int(error.code)
-        if code == 401:
-            return _reaper_error("auth", "REAPER rejected the username or password.", code, elapsed_ms)
-        if code == 404:
-            return _reaper_error(
-                "notFound",
-                "REAPER answered, but the web interface command was not found on this port.",
-                code,
-                elapsed_ms,
-            )
-        return _reaper_error("http", "REAPER answered with HTTP %d." % code, code, elapsed_ms)
-    except Exception:
+        return _reaper_error(
+            "timeout",
+            "REAPER did not respond within %.1f s." % _REAPER_TIMEOUT_SECONDS,
+            elapsed_ms=elapsed_ms,
+        )
+    except Exception as error:
         elapsed_ms = int((time.time() - started) * 1000)
-        if elapsed_ms >= int(_REAPER_TIMEOUT_SECONDS * 1000) - 50:
-            return _reaper_error(
-                "timeout",
-                "REAPER did not respond within %.1f s." % _REAPER_TIMEOUT_SECONDS,
-                None,
-                elapsed_ms,
-            )
-        return _reaper_error("unreachable", "Could not connect to REAPER.", None, elapsed_ms)
+        return _reaper_error(
+            "unreachable",
+            "Could not connect to REAPER.",
+            elapsed_ms=elapsed_ms,
+            detail=u"%s: %s" % (type(error).__name__, error),
+        )
 
     elapsed_ms = int((time.time() - started) * 1000)
+    if status == 401:
+        return _reaper_error("auth", "REAPER rejected the username or password.", status, elapsed_ms)
+    if status == 404:
+        return _reaper_error(
+            "notFound",
+            "REAPER answered, but the web interface command was not found on this port.",
+            status,
+            elapsed_ms,
+        )
+    if status < 200 or status >= 300:
+        return _reaper_error("http", "REAPER answered with HTTP %d." % status, status, elapsed_ms)
+
     try:
         body = raw.decode("utf-8")
     except:
@@ -321,4 +381,5 @@ def reaperRequest(request_json):
         "status": status,
         "body": body,
         "elapsedMs": elapsed_ms,
+        "via": "designer",
     })
