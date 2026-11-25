@@ -1,3 +1,38 @@
+# TrackForge v0.2.0
+
+This release adds **ReaperConnect**, a new tab that reads regions straight from a running REAPER project, on the same computer or another one on the network, and compares them with the tracks in Designer. No CSV export is needed anymore to keep track TCs aligned with the REAPER session.
+
+## Highlights
+
+- New **ReaperConnect** tab next to **Import file**
+- Connects to REAPER's built-in web interface (host, port, optional username and password)
+- **Test connection** and **Read regions** buttons with clear error messages for timeout, wrong port, wrong credentials and firewall issues
+- Converts region starts to timecode with a selectable frame rate (23.976 to 60, including 29.97 drop-frame) and a project start TC
+- Compares every region with the Designer tracks and highlights:
+  - **TC to update**: the track exists but its TC differs or is missing
+  - **Missing in Designer**: the region has no track yet
+  - **To repair**: the track lacks its second section
+  - **Conflict**: two regions give the same track name
+  - **In sync** and **Designer only** (shown for information, never changed)
+- Track names can be edited per row to match a different track or resolve a conflict
+- Changes are applied with the same create/update/repair logic as file import
+- REAPER connection status shown in the top bar
+
+## Setup
+
+1. In REAPER, open **Preferences › Control/OSC/web**, add a **Web browser interface** and note its port (8080 by default).
+2. On the REAPER computer, allow incoming connections on that port in the firewall.
+3. In TrackForge, open **ReaperConnect**, enter the REAPER computer's IP and port, the frame rate and the project start TC, then choose **Test connection** and **Read regions**.
+
+## Notes
+
+- TrackForge reads REAPER directly from the plugin page when possible, otherwise through Designer. The status line shows which path was used.
+- The REAPER password is not saved.
+- The release ZIP now uses standard forward-slash paths, so it extracts correctly with any ZIP tool.
+- As always, test on a copy of the project before applying a large set of changes.
+
+---
+
 # TrackForge v0.1.0
 
 TrackForge is a local Disguise Designer plugin built to import track lists from CSV and Excel files, preview the changes, and create or update timecode (TC) tags directly in the project.

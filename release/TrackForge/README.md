@@ -2,6 +2,8 @@
 
 **TrackForge** is a local plugin for Disguise Designer. It imports CSV or Excel `.xlsx` track lists, previews the changes, and creates tracks or updates the timecode (TC) tag on existing tracks.
 
+**Ready-to-install release:** [TrackForge-v0.2.0.zip](./release/TrackForge-v0.2.0.zip)
+
 ## GitHub release and source
 
 The GitHub release ZIP contains the ready-to-install plugin folder. Extract it and copy the included `TrackForge` folder to the project's `plugins` folder. The GitHub repository also includes the plugin source under `packages/plugins/TrackForge`.
@@ -31,6 +33,17 @@ Keep a backup of an existing plugin folder before replacing it. The plugin folde
 5. Choose **Apply changes** and review the result shown for each row.
 
 Rows with invalid names or timecodes cannot be selected. Tracks whose TC tag already matches the imported value are marked as up to date and are not changed. In track-only mode, only new tracks can be selected; existing tracks are left unchanged.
+
+## ReaperConnect
+
+The **ReaperConnect** tab reads regions from a REAPER project, on this computer or another one on the network, and compares them with the tracks in Designer.
+
+1. In REAPER, open **Preferences › Control/OSC/web**, add a **Web browser interface** and note its port (8080 by default). Set a username and password there if you want one. On the REAPER computer, allow incoming connections on that port in the firewall.
+2. In TrackForge, enter the REAPER computer's IP address and port, the project frame rate and the project start TC, then choose **Test connection**.
+3. Choose **Read regions**. Each region is matched to a track using the same name cleanup as file import, and its start time plus the project start TC gives the TC. Rows are marked as TC to update, missing in Designer, to repair, conflict (two regions with the same track name), in sync, or Designer only.
+4. Edit a track name in the table if needed, select the rows and choose **Apply changes**. Designer-only tracks and conflicts are never changed.
+
+TrackForge contacts REAPER through Designer, so the REAPER computer must be reachable from the Designer machine. The password is not saved.
 
 ## Input file format
 
@@ -73,6 +86,8 @@ Test on a copy of the project before applying a large or important track list.
 - **No preview appears:** Choose a track name column and either a timecode column or **No timecode — create tracks only**. Ensure the file includes a header row and data rows.
 - **Invalid timecode:** Use `H:MM:SS`, `HH:MM:SS`, `H:MM:SS:FF`, or `HH:MM:SS:FF`; minutes and seconds must be between `00` and `59`.
 - **An operation fails:** Read the row's status message and verify that the project is writable and Designer remains connected.
+- **REAPER not reachable:** Check that REAPER is open, that its web interface uses the port entered in TrackForge, and that the firewall on the REAPER computer allows incoming connections from the Designer machine. The detail in brackets after the message shows the network error.
+- **Region TCs are offset:** Check the frame rate and the project start TC in ReaperConnect; they must match the REAPER project settings.
 
 ---
 
@@ -83,6 +98,8 @@ Created by Stefano Petroni
 # TrackForge (Italiano)
 
 **TrackForge** è un plugin locale per Disguise Designer. Importa scalette CSV o Excel `.xlsx`, mostra un'anteprima delle modifiche e crea le track oppure aggiorna il tag timecode (TC) delle track esistenti.
+
+**Release pronta per l'installazione:** [TrackForge-v0.2.0.zip](./release/TrackForge-v0.2.0.zip)
 
 ## Release GitHub e sorgenti
 
@@ -113,6 +130,17 @@ Prima di sostituire un plugin già installato, conserva una copia di backup dell
 5. Premi **Apply changes** e controlla l'esito mostrato per ogni riga.
 
 Le righe con nomi o timecode non validi non sono selezionabili. Le track con tag TC già corrispondente vengono indicate come aggiornate e non vengono modificate. Nella modalità senza TC sono selezionabili solo le nuove track; quelle esistenti restano invariate.
+
+## ReaperConnect
+
+La scheda **ReaperConnect** legge le region di un progetto REAPER, su questo computer o su un altro in rete, e le confronta con le track di Designer.
+
+1. In REAPER apri **Preferences › Control/OSC/web**, aggiungi una **Web browser interface** e annota la porta (di default 8080). Se vuoi, imposta lì username e password. Sul computer di REAPER consenti nel firewall le connessioni in entrata su quella porta.
+2. In TrackForge inserisci l'indirizzo IP e la porta del computer REAPER, il frame rate e lo start TC del progetto, poi premi **Test connection**.
+3. Premi **Read regions**. Ogni region viene abbinata a una track con la stessa pulizia del nome usata nell'import da file; il TC è l'inizio della region più lo start TC del progetto. Le righe vengono segnate come TC da aggiornare, mancante in Designer, da riparare, conflitto (due region con lo stesso nome di track), allineata o solo in Designer.
+4. Se serve, modifica il nome della track nella tabella, seleziona le righe e premi **Apply changes**. Le track presenti solo in Designer e i conflitti non vengono mai modificati.
+
+TrackForge contatta REAPER tramite Designer, quindi il computer REAPER deve essere raggiungibile dalla macchina Designer. La password non viene salvata.
 
 ## Formato del file
 
@@ -154,6 +182,8 @@ Prima di applicare una scaletta importante, esegui una prova su una copia del pr
 - **L'anteprima non appare:** seleziona la colonna del nome track e una colonna timecode oppure **No timecode — create tracks only**. Verifica che il file contenga una riga di intestazione e righe di dati.
 - **Timecode non valido:** usa `H:MM:SS`, `HH:MM:SS`, `H:MM:SS:FF` oppure `HH:MM:SS:FF`; minuti e secondi devono essere compresi tra `00` e `59`.
 - **Un'operazione non riesce:** leggi il messaggio di stato della riga e verifica che il progetto sia scrivibile e Designer sia ancora connesso.
+- **REAPER non raggiungibile:** verifica che REAPER sia aperto, che la sua web interface usi la porta indicata in TrackForge e che il firewall del computer REAPER consenta le connessioni in entrata dalla macchina Designer. Il dettaglio tra parentesi dopo il messaggio indica l'errore di rete.
+- **I TC delle region sono sfasati:** controlla frame rate e start TC del progetto in ReaperConnect; devono corrispondere alle impostazioni del progetto REAPER.
 
 ---
 

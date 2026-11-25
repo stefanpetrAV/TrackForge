@@ -10,6 +10,14 @@ import {
   type ImportRecord,
 } from './importParser'
 import { trackforge } from './trackforge.py'
+import ReaperConnect from './ReaperConnect.vue'
+import { fetchReaperDirect } from './reaperRegions'
+import type {
+  ReaperConnectApi,
+  ReaperConnectionState,
+  ReaperResponse,
+  SyncResult,
+} from './reaperRegions'
 
 interface DesignerTrack {
   name: string
@@ -42,7 +50,22 @@ interface PreviewTrack {
 }
 
 const { endpoint, connected } = useDesigner()
-const { getExistingTracks, syncTrack, registration } = trackforge(endpoint.value)
+const { getExistingTracks, syncTrack, reaperRequest, registration } = trackforge(endpoint.value)
+
+const activeTab = ref<'import' | 'reaper'>('import')
+const reaperState = ref<ReaperConnectionState>('idle')
+const reaperAttention = ref(0)
+const reaperLabels: Record<ReaperConnectionState, string> = {
+  idle: 'REAPER not connected',
+  connecting: 'Connecting to REAPER…',
+  connected: 'REAPER connected',
+  error: 'REAPER not reachable',
+}
+
+function setReaperStatus(state: ReaperConnectionState, attention: number) {
+  reaperState.value = state
+  reaperAttention.value = attention
+}
 
 const rows = ref<PreviewTrack[]>([])
 const columns = ref<ImportColumn[]>([])
@@ -265,6 +288,21 @@ async function createSelectedTracks() {
   }
 }
 
+const reaperApi: ReaperConnectApi = {
+  async reaperRequest(request) {
+    // The plugin page can read REAPER directly when the browser allows it;
+    // otherwise Designer's Python opens the connection.
+    const direct = await fetchReaperDirect(request)
+    if (direct) return direct
+    await registration
+    return parseResponse<ReaperResponse>(await reaperRequest(JSON.stringify(request)))
+  },
+  async syncTrack(request) {
+    return parseResponse<SyncResult>(await syncTrack(JSON.stringify(request)))
+  },
+  refreshTracks: refreshExistingTracks,
+}
+
 onMounted(async () => {
   try {
     await registration
@@ -285,13 +323,36 @@ onMounted(async () => {
           <h1>TrackForge</h1>
         </div>
       </div>
-      <span class="connection" :class="{ connected }">
-        <span class="connection-dot"></span>
-        {{ connected ? 'Designer connected' : 'Designer not connected' }}
-      </span>
+      <div class="connections">
+        <span class="connection" :class="{ connected }">
+          <span class="connection-dot"></span>
+          {{ connected ? 'Designer connected' : 'Designer not connected' }}
+        </span>
+        <span class="connection" :class="`reaper-${reaperState}`">
+          <span class="connection-dot"></span>
+          {{ reaperLabels[reaperState] }}
+        </span>
+      </div>
     </header>
 
-    <main>
+    <nav class="tabs" aria-label="Mode">
+      <button class="tab" :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">Import file</button>
+      <button class="tab" :class="{ active: activeTab === 'reaper' }" @click="activeTab = 'reaper'">
+        ReaperConnect
+        <span v-if="reaperAttention" class="tab-badge">{{ reaperAttention }}</span>
+      </button>
+    </nav>
+
+    <main v-show="activeTab === 'reaper'">
+      <ReaperConnect
+        :designer-connected="connected"
+        :tracks="existingTracks"
+        :api="reaperApi"
+        @status="setReaperStatus"
+      />
+    </main>
+
+    <main v-show="activeTab === 'import'">
       <section class="panel import-panel">
         <div>
           <h2>Import a track list</h2>
@@ -475,7 +536,14 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
 h2 { margin: 0 0 7px; font-size: 16px; }
 p { margin: 0; color: var(--designer-muted); font-size: 13px; line-height: 1.55; }
 .connection { display: inline-flex; align-items: center; gap: 8px; color: #d3b66d; font-size: 12px; }
-.connection.connected { color: #61c86a; }
+.connection.connected, .connection.reaper-connected { color: #61c86a; }
+.connection.reaper-error { color: #ffaaa0; }
+.connections { display: flex; flex-wrap: wrap; gap: 16px; }
+.tabs { display: flex; gap: 2px; margin-top: 14px; border-bottom: 1px solid var(--designer-border); }
+.tab { padding: 8px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--designer-muted); font-size: 12px; font-weight: 600; }
+.tab:hover { color: #eeeeee; }
+.tab.active { border-bottom-color: var(--designer-green-hover); color: #eeeeee; }
+.tab-badge { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #5a4a26; color: #e7c46b; font-size: 10px; }
 .connection-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 main { display: grid; gap: 18px; padding-top: 22px; }
 .panel { border: 1px solid var(--designer-border); border-radius: 6px; background: var(--designer-panel); }
