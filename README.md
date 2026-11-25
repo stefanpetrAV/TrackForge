@@ -34,6 +34,17 @@ Keep a backup of an existing plugin folder before replacing it. The plugin folde
 
 Rows with invalid names or timecodes cannot be selected. Tracks whose TC tag already matches the imported value are marked as up to date and are not changed. In track-only mode, only new tracks can be selected; existing tracks are left unchanged.
 
+## ReaperConnect
+
+The **ReaperConnect** tab reads regions from a REAPER project, on this computer or another one on the network, and compares them with the tracks in Designer.
+
+1. In REAPER, open **Preferences › Control/OSC/web**, add a **Web browser interface** and note its port (8080 by default). Set a username and password there if you want one. On the REAPER computer, allow incoming connections on that port in the firewall.
+2. In TrackForge, enter the REAPER computer's IP address and port, the project frame rate and the project start TC, then choose **Test connection**.
+3. Choose **Read regions**. Each region is matched to a track using the same name cleanup as file import, and its start time plus the project start TC gives the TC. Rows are marked as TC to update, missing in Designer, to repair, conflict (two regions with the same track name), in sync, or Designer only.
+4. Edit a track name in the table if needed, select the rows and choose **Apply changes**. Designer-only tracks and conflicts are never changed.
+
+TrackForge contacts REAPER through Designer, so the REAPER computer must be reachable from the Designer machine. The password is not saved.
+
 ## Input file format
 
 TrackForge looks for a header row within the first 20 rows. It supports comma-, semicolon-, and tab-delimited CSV files. For Excel, it uses the first worksheet containing a usable header row.
@@ -117,6 +128,17 @@ Prima di sostituire un plugin già installato, conserva una copia di backup dell
 5. Premi **Apply changes** e controlla l'esito mostrato per ogni riga.
 
 Le righe con nomi o timecode non validi non sono selezionabili. Le track con tag TC già corrispondente vengono indicate come aggiornate e non vengono modificate. Nella modalità senza TC sono selezionabili solo le nuove track; quelle esistenti restano invariate.
+
+## ReaperConnect
+
+La scheda **ReaperConnect** legge le region di un progetto REAPER, su questo computer o su un altro in rete, e le confronta con le track di Designer.
+
+1. In REAPER apri **Preferences › Control/OSC/web**, aggiungi una **Web browser interface** e annota la porta (di default 8080). Se vuoi, imposta lì username e password. Sul computer di REAPER consenti nel firewall le connessioni in entrata su quella porta.
+2. In TrackForge inserisci l'indirizzo IP e la porta del computer REAPER, il frame rate e lo start TC del progetto, poi premi **Test connection**.
+3. Premi **Read regions**. Ogni region viene abbinata a una track con la stessa pulizia del nome usata nell'import da file; il TC è l'inizio della region più lo start TC del progetto. Le righe vengono segnate come TC da aggiornare, mancante in Designer, da riparare, conflitto (due region con lo stesso nome di track), allineata o solo in Designer.
+4. Se serve, modifica il nome della track nella tabella, seleziona le righe e premi **Apply changes**. Le track presenti solo in Designer e i conflitti non vengono mai modificati.
+
+TrackForge contatta REAPER tramite Designer, quindi il computer REAPER deve essere raggiungibile dalla macchina Designer. La password non viene salvata.
 
 ## Formato del file
 

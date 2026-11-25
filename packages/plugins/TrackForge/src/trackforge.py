@@ -1,7 +1,9 @@
-__all__ = ["getExistingTracks", "syncTrack"]
+__all__ = ["getExistingTracks", "syncTrack", "reaperRequest"]
 
+import base64
 import json
 import re
+import time
 
 
 def _json_result(value):
@@ -216,4 +218,107 @@ def syncTrack(request_json):
         "name": title,
         "path": path,
         "timecode": timecode,
+    })
+
+
+_REAPER_COMMANDS = ("TRANSPORT", "REGION")
+_REAPER_TIMEOUT_SECONDS = 1.5
+
+
+def _reaper_error(kind, error, status=None, elapsed_ms=None):
+    return _json_result({
+        "ok": False,
+        "kind": kind,
+        "status": status,
+        "error": error,
+        "elapsedMs": elapsed_ms,
+    })
+
+
+def reaperRequest(request_json):
+    """Send one read-only command to the REAPER web interface.
+
+    The request runs inside Designer, so the plugin browser does not need
+    cross-origin access to the REAPER computer. The timeout is short because
+    this call blocks Designer's Python while it waits.
+    """
+    try:
+        request = json.loads(request_json)
+        host = unicode(request.get("host", "")).strip()
+        port = int(request.get("port", 0))
+        command = unicode(request.get("command", "")).strip().upper()
+        username = unicode(request.get("username", "") or "")
+        password = unicode(request.get("password", "") or "")
+    except:
+        return _reaper_error("invalid", "Invalid REAPER connection settings.")
+
+    if not re.match(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,252})$", host):
+        return _reaper_error("invalid", "Enter a valid REAPER host name or IP address.")
+    if port < 1 or port > 65535:
+        return _reaper_error("invalid", "Enter a REAPER port between 1 and 65535.")
+    if command not in _REAPER_COMMANDS:
+        return _reaper_error("invalid", "Unsupported REAPER command.")
+
+    try:
+        import urllib2
+        HTTPError = urllib2.HTTPError
+        URLError = urllib2.URLError
+        Request = urllib2.Request
+        urlopen = urllib2.urlopen
+    except ImportError:
+        try:
+            import urllib.request as _request
+            import urllib.error as _error
+            HTTPError = _error.HTTPError
+            URLError = _error.URLError
+            Request = _request.Request
+            urlopen = _request.urlopen
+        except ImportError:
+            return _reaper_error("unsupported", "Designer's Python cannot make HTTP requests.")
+
+    url = "http://%s:%d/_/%s" % (host, port, command)
+    http_request = Request(url)
+    if username or password:
+        token = base64.b64encode(("%s:%s" % (username, password)).encode("utf-8"))
+        http_request.add_header("Authorization", "Basic %s" % token.decode("ascii"))
+
+    started = time.time()
+    try:
+        response = urlopen(http_request, timeout=_REAPER_TIMEOUT_SECONDS)
+        raw = response.read()
+        status = int(response.getcode())
+    except HTTPError as error:
+        elapsed_ms = int((time.time() - started) * 1000)
+        code = int(error.code)
+        if code == 401:
+            return _reaper_error("auth", "REAPER rejected the username or password.", code, elapsed_ms)
+        if code == 404:
+            return _reaper_error(
+                "notFound",
+                "REAPER answered, but the web interface command was not found on this port.",
+                code,
+                elapsed_ms,
+            )
+        return _reaper_error("http", "REAPER answered with HTTP %d." % code, code, elapsed_ms)
+    except Exception:
+        elapsed_ms = int((time.time() - started) * 1000)
+        if elapsed_ms >= int(_REAPER_TIMEOUT_SECONDS * 1000) - 50:
+            return _reaper_error(
+                "timeout",
+                "REAPER did not respond within %.1f s." % _REAPER_TIMEOUT_SECONDS,
+                None,
+                elapsed_ms,
+            )
+        return _reaper_error("unreachable", "Could not connect to REAPER.", None, elapsed_ms)
+
+    elapsed_ms = int((time.time() - started) * 1000)
+    try:
+        body = raw.decode("utf-8")
+    except:
+        body = raw.decode("latin-1")
+    return _json_result({
+        "ok": True,
+        "status": status,
+        "body": body,
+        "elapsedMs": elapsed_ms,
     })
